@@ -20,24 +20,41 @@ app = FastAPI(
     title="Weather + Chatbot API",
     description="Chatbot with weather agent powered by Gemini LLM via Pydantic-AI",
 )
+# Convert history to a single string for context
+def format_history(history):
+    text = ""
+    for message in history:
+        role = "User" if message["role"] == "user" else "Assistant"
+        text += f"{role}: {message['content']}\n"
+    text += "Assistant: "
+    return text
+
+conversation_history = []
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    """
-    Main chat endpoint:
-    - Ask chatbot agent for response.
-    - If response is 'WEATHER_QUERY', call weather_agent.
-    """
     async with AsyncClient() as client:
         deps = Deps(client=client, geo_api_key=geo_api_key or "", weather_api_key=weather_api_key or "")
         try:
-            chat_result = await chatbot_agent.run(request.query)
-            out = (chat_result.output or "").strip()
+            # Add user message
+            conversation_history.append({"role": "user", "content": request.query})
 
-            if out.upper() == "WEATHER_QUERY":
+            # Format conversation history as string
+            prompt = format_history(conversation_history)
+
+            # Generate bot response
+            chat_result = await chatbot_agent.run(prompt)
+            bot_reply = chat_result.output or ""
+
+            # Save bot response
+            conversation_history.append({"role": "assistant", "content": bot_reply})
+
+            # Handle weather query
+            if bot_reply.upper() == "WEATHER_QUERY":
                 weather_result = await weather_agent.run(request.query, deps=deps)
                 return ChatResponse(response=weather_result.output or "No weather info available.")
-            return ChatResponse(response=out)
+
+            return ChatResponse(response=bot_reply)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Chat failed: {e}")
 
