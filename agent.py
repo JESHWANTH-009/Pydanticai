@@ -76,12 +76,16 @@ async def get_weather(ctx: RunContext[Deps], lat: float, lng: float) -> dict[str
         temp = values.get("temperature")
         code = values.get("weatherCode")
         desc_map = {
-            1000: "clear", 1100: "mostly clear", 1101: "partly cloudy",
-            1102: "mostly cloudy", 2000: "fog", 2100: "light fog",
-            4000: "drizzle", 4001: "rain", 4200: "light rain",
-            5000: "snow", 5001: "flurries", 5100: "light snow"
+            1000: "clear", 1100: "mostly clear", 1101: "partly cloudy", 1102: "mostly cloudy",
+            2000: "fog", 2100: "light fog",
+            3000: "light wind", 3001: "wind", 3002: "strong wind",
+            4000: "drizzle", 4001: "rain", 4200: "light rain", 4201: "heavy rain",
+            5000: "snow", 5001: "flurries", 5100: "light snow", 5101: "heavy snow",
+            6000: "freezing drizzle", 6001: "freezing rain", 6200: "light freezing rain", 6201: "heavy freezing rain",
+            7000: "ice pellets", 7101: "heavy ice pellets", 7102: "light ice pellets",
+            8000: "thunderstorm"
         }
-        description = desc_map.get(code, "unspecified")
+        description = desc_map.get(code, "clear sky")
         return {"temperature": f"{temp} °C" if temp is not None else "N/A", "description": description}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Weather API error: {e}")
